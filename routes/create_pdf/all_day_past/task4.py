@@ -108,10 +108,10 @@ async def fetch_incountry_trading(pool, date):
             ban_rong = ban_rong_row["ban_rong"] if ban_rong_row and ban_rong_row["ban_rong"] is not None else 0
 
             symbol_mua_rong = mua_rong_lon_nhat_row["symbol"] if mua_rong_lon_nhat_row else "Không có dữ liệu"
-            value_mua_rong = mua_rong_lon_nhat_row["mua_rong_lon_nhat"] if mua_rong_lon_nhat_row else 0
+            value_mua_rong = mua_rong_lon_nhat_row["mua_rong_lon_nhat"] if mua_rong_lon_nhat_row is not None else 0
 
             symbol_ban_rong = ban_rong_lon_nhat_row["symbol"] if ban_rong_lon_nhat_row else "Không có dữ liệu"
-            value_ban_rong = ban_rong_lon_nhat_row["ban_rong_lon_nhat"] if ban_rong_lon_nhat_row else 0
+            value_ban_rong = ban_rong_lon_nhat_row["ban_rong_lon_nhat"] if ban_rong_lon_nhat_row is not None else 0
 
         except Exception as e:
             print(f"Lỗi khi truy vấn dữ liệu: {e}")
@@ -121,8 +121,8 @@ async def fetch_incountry_trading(pool, date):
 - Tổ chức trong nước:
     - Mua ròng: {mua_rong / 1_000_000_000:,.0f} tỷ VND
     - Mua ròng: {-ban_rong / 1_000_000_000:,.0f} tỷ VND
-    - Cổ phiếu được mua ròng mạnh nhất: {symbol_mua_rong} ({value_mua_rong / 1_000_000_000:,.0f} tỷ VND)
-    - Cổ phiếu bị bán ròng mạnh nhất: {symbol_ban_rong} ({value_ban_rong / 1_000_000_000:,.0f} tỷ VND)
+    - Cổ phiếu được mua ròng mạnh nhất: {symbol_mua_rong} ({value_mua_rong if value_mua_rong else 0  / 1_000_000_000:,.0f} tỷ VND)
+    - Cổ phiếu bị bán ròng mạnh nhất: {symbol_ban_rong} ({value_ban_rong if value_mua_rong else 0 / 1_000_000_000:,.0f} tỷ VND)
         """
         print("Xong Task 4 lúc: ", datetime.now())
         return result_str.strip()
