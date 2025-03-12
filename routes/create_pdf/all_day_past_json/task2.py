@@ -1,13 +1,9 @@
 import asyncio
 import asyncpg
-import time
 from datetime import datetime
-# Thông tin kết nối PostgreSQL
-
-
+import json
 # 🟢 Hàm truy vấn top 5 cổ phiếu tăng mạnh nhất
-async def query_top_5_advance_stocks(pool,date_key):
-
+async def query_top_5_advance_stocks(pool, date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
@@ -22,30 +18,28 @@ JOIN basement.aip_report f2
         CASE 
             WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
             ELSE f1.date::date - INTERVAL '1 day'   
-        end
+        END
 WHERE f1.date::date = '{date_key}'
   AND f1.priceclose IS NOT NULL
 ORDER BY advance_percent DESC
 LIMIT 5;
             """
-
             rows = await conn.fetch(query)
-            await conn.close()
-
-            if not rows:
-                return "🔷 Top 5 cổ phiếu tăng mạnh nhất: Không có dữ liệu."
-
-            result = "  Top 5 cổ phiếu tăng mạnh nhất:\n"
-            for i, row in enumerate(rows, start=1):
-                result += f"        {i}. [{row['symbol']}] - Tăng {round(row['advance_percent'], 2)}% ({round(row['close_diff'], 2)} điểm)\n"
-            print("Xong task 2.1 lúc: ", datetime.now())
-            return result.strip()
-
+            result = {"Top 5 cổ phiếu tăng mạnh nhất": [
+                {
+                    "rank": i+1, 
+                    "symbol": row["symbol"], 
+                    "advance_percent": round(row["advance_percent"], 2), 
+                    "close_diff": round(row["close_diff"], 2)
+                }
+                for i, row in enumerate(rows)
+            ]}
+            return json.dumps(result, ensure_ascii=False)
         except Exception as e:
-            return f"Lỗi khi chạy truy vấn tăng mạnh nhất: {str(e)}"
+            return {"error": f"Lỗi khi chạy truy vấn tăng mạnh nhất: {str(e)}"}
 
 # 🟢 Hàm truy vấn top 5 cổ phiếu giảm mạnh nhất
-async def query_top_5_decline_stocks(pool,date_key):
+async def query_top_5_decline_stocks(pool, date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
@@ -60,90 +54,64 @@ JOIN basement.aip_report f2
         CASE 
             WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
             ELSE f1.date::date - INTERVAL '1 day'   
-        end
+        END
 WHERE f1.date::date = '{date_key}'
   AND f1.priceclose IS NOT NULL
 ORDER BY advance_percent 
 LIMIT 5;
             """
-
             rows = await conn.fetch(query)
-            await conn.close()
-
-            if not rows:
-                return "🔻 Top 5 cổ phiếu giảm mạnh nhất: Không có dữ liệu."
-
-            result = "  Top 5 cổ phiếu giảm mạnh nhất:\n"
-            for i, row in enumerate(rows, start=1):
-                result += f"        {i}. [{row['symbol']}] - Giảm {round(abs(row['advance_percent']), 2)}% ({round(row['close_diff'], 2)} điểm)\n"
-            print("Xong task 2.1 lúc: ", datetime.now())
-            return result.strip()
+            result = {"top_5_decline": [
+                {"rank": i+1, "symbol": row["symbol"], "decline_percent": round(abs(row["advance_percent"]), 2), "close_diff": round(row["close_diff"], 2)}
+                for i, row in enumerate(rows)
+            ]}
+            return json.dumps(result, ensure_ascii=False)
         except Exception as e:
-            return f"❌ Lỗi khi chạy truy vấn giảm mạnh nhất: {str(e)}"
+            return {"error": f"Lỗi khi chạy truy vấn giảm mạnh nhất: {str(e)}"}
 
-#Cổ phiếu có thanh khoản cao nhất
-async def highest_volume_stocks(pool,date_key):
+# Cổ phiếu có thanh khoản cao nhất
+async def highest_volume_stocks(pool, date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
 SELECT symbol, totalvolume 
 FROM basement.aip_report 
-where date::date = '{date_key}'  
+WHERE date::date = '{date_key}'  
 ORDER BY totalvolume DESC 
-LIMIT 1
+LIMIT 1;
             """
-
             row = await conn.fetchrow(query)
-            await conn.close()
-
-            if not row:
-                return f"Không có dữ liệu về khối lượng giao dịch cho ngày {date_key}."
-            # date_key_convert = datetime.strptime(str(date_key), "%Y%m%d").date()
-            # date_key = date_key_convert.strftime("%d/%m/%Y")
-            print("Xong task 2.2 lúc: ", datetime.now())
-            return f"Cổ phiếu có thanh khoản cao nhất ngày {date_key}: [{row['symbol']}] - {row['totalvolume']} cổ phiếu"
-
+            result =  {"highest_volume_stock": {"symbol": row["symbol"], "total_volume": row["totalvolume"]} if row else None}
+            return json.dumps(result, ensure_ascii=False)
         except Exception as e:
-            return f"❌ Lỗi khi truy vấn khối lượng giao dịch cao nhất: {str(e)}"
-        
-async def highest_volatility_stock(pool,date_key):
+            return {"error": f"Lỗi khi truy vấn khối lượng giao dịch cao nhất: {str(e)}"}
+
+# Cổ phiếu có biên độ dao động mạnh nhất
+async def highest_volatility_stock(pool, date_key):
     async with pool.acquire() as conn:
         try:
-
-
             query = f"""
 SELECT 
     f1.symbol,
     (f1.pricehigh - f1.pricelow) / f2.priceclose AS advance_percent,
-	(f1.pricehigh - f1.pricelow)  As advance_grade
+    (f1.pricehigh - f1.pricelow) AS advance_grade
 FROM basement.aip_report f1
 JOIN basement.aip_report f2 
     ON f1.symbol = f2.symbol 
     AND f2.date::date =  
-	     CASE 
+        CASE 
             WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
             ELSE f1.date::date - INTERVAL '1 day'   
-       end 
+        END 
 WHERE f1.date::date = '{date_key}' 
-order by advance_percent desc
-limit 1
+ORDER BY advance_percent DESC
+LIMIT 1;
             """
-
             row = await conn.fetchrow(query)
-            await conn.close()
-
-            if not row:
-                return f"Cổ phiếu có biên độ dao động mạnh nhất: Không có dữ liệu."
-            print("Xong task 2.2 lúc: ", datetime.now())
-            return (
-                "Cổ phiếu có biên độ dao động mạnh nhất:\n"
-                f"• [{row['symbol']}] – Biên độ {round(row['advance_percent'], 2)}% "
-                f"({round(row['advance_grade'], 2)} điểm)"
-            )
-
+            result = {"highest_volatility_stock": {"symbol": row["symbol"], "volatility_percent": round(row["advance_percent"], 2), "volatility_grade": round(row["advance_grade"], 2)} if row else None}
+            return json.dumps(result, ensure_ascii=False)
         except Exception as e:
-            return f"Cổ phiếu có biên độ dao động mạnh nhất: Không có dữ liệu."
-
+            return json.dumps({"error": f"Lỗi khi truy vấn biên độ dao động mạnh nhất: {str(e)}"}, ensure_ascii=False)
 
 # import asyncio
 # import asyncpg

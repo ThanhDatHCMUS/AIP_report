@@ -59,8 +59,8 @@ async def fetch_foreign_trading(pool, date):
 - Nhà Đầu tư nước ngoài
     - Tổng giá trị bán ròng: {ban_rong / 1_000_000_000:,.0f} tỷ VND
     - Tổng giá trị mua ròng: {mua_rong / 1_000_000_000:,.0f} tỷ VND
-    - Cổ phiếu bị bán ròng nhiều nhất: {symbol_ban_rong} ({value_ban_rong if value_ban_rong else 0 / 1_000_000_000:,.0f} tỷ VND)
-    - Cổ phiếu được mua ròng nhiều nhất: {symbol_mua_rong} ({value_mua_rong if value_mua_rong else 0 / 1_000_000_000:,.0f} tỷ VND)
+    - Cổ phiếu bị bán ròng nhiều nhất: {symbol_ban_rong} ({round(value_ban_rong / 1000000000, 0) if value_ban_rong  else 0 } tỷ VND)
+    - Cổ phiếu được mua ròng nhiều nhất: {symbol_mua_rong} ({round(value_mua_rong  / 1000000000, 0) if value_mua_rong else 0 } tỷ VND)
         """
 
         return result_str.strip()
@@ -119,8 +119,8 @@ async def fetch_incountry_trading(pool, date):
 - Tổ chức trong nước:
     - Mua ròng: {mua_rong / 1_000_000_000:,.0f} tỷ VND
     - Mua ròng: {-ban_rong / 1_000_000_000:,.0f} tỷ VND
-    - Cổ phiếu được mua ròng mạnh nhất: {symbol_mua_rong} ({value_mua_rong / 1_000_000_000:,.0f} tỷ VND)
-    - Cổ phiếu bị bán ròng mạnh nhất: {symbol_ban_rong} ({value_ban_rong / 1_000_000_000:,.0f} tỷ VND)
+    - Cổ phiếu được mua ròng mạnh nhất: {symbol_mua_rong} ({round(value_mua_rong / 1000000000, 0) if value_mua_rong else 0  } tỷ VND)
+    - Cổ phiếu bị bán ròng mạnh nhất: {symbol_ban_rong} ({round(-value_ban_rong/1000000000, 0) if value_ban_rong else 0 } tỷ VND)
         """
         print("Xong Task 4 lúc: ", datetime.now())
         return result_str.strip()

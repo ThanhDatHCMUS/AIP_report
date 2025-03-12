@@ -1,17 +1,10 @@
+import json
 import asyncio
 import asyncpg
 import time
-from . import task1
-from . import task2
-from . import task3
-from . import task4
-
-
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
 from datetime import datetime
+from . import task1, task2, task3, task4
+
 # Thông tin kết nối PostgreSQL
 DB_CONFIG = {
     "database": "postgres",
@@ -21,56 +14,9 @@ DB_CONFIG = {
     "port": "5444",
 }
 
-# Hàm tạo PDF báo cáo
-def create_pdf_report(date_key, query_index_data, advance_result, decline_result, stock_volumn, highest_volatility, stock_data_task3, foreign_trading, incountry_trading, elapsed_time):
-    pdf_path = f"{date_key}-allday.pdf"
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
-
-    # Đăng ký font hỗ trợ tiếng Việt
-    pdfmetrics.registerFont(TTFont('DejaVu', './ttf/DejaVuSans.ttf'))
-
-    # Cài đặt font tiêu đề
-    c.setFont("DejaVu", 12)
-
-    c.drawCentredString(width / 2, height - 20, f"BÁO CÁO KẾT THÚC PHIÊN GIAO DỊCH NGÀY: {date_key}")
-
-    y_position = height - 120  # Điều chỉnh vị trí xuống dưới
-
-    # Cài đặt font nội dung
-    c.setFont("DejaVu", 12)
-    y_position = height - 50
-
-    # Ghi nội dung vào PDF
-    sections = [
-        ("1. Tổng kết thị trường", query_index_data + "\n"),
-        ("2. Biến động cổ phiếu nổi bật", advance_result + "\n" + decline_result + "\n" + stock_volumn + "\n" + highest_volatility + "\n"),
-        ("3. Diễn biến ngành nghề", stock_data_task3 + "\n"),
-        ("4. Giao Dịch Khối Ngoại và Tổ Chức", foreign_trading + "\n" + incountry_trading + "\n"),
-    ]
-
-    for title, content in sections:
-        c.setFont("DejaVu", 12)
-        c.drawString(50, y_position, title)
-        y_position -= 20
-        c.setFont("DejaVu", 12)
-        for line in content.split("\n"):
-            c.drawString(50, y_position, line)
-            y_position -= 15
-            if y_position < 0:  # Xuống trang mới nếu hết trang
-                c.showPage()
-                c.setFont("DejaVu", 12)
-                y_position = height - 50
-
-    # Lưu PDF
-    c.save()
-    print(f"File báo cáo đã được tạo: {pdf_path}")
-
 async def fetch_data(date_key):
     """Sử dụng connection pool để chạy tất cả truy vấn đồng thời"""
     async with asyncpg.create_pool(**DB_CONFIG) as pool:
-
-            # Chạy tất cả truy vấn song song
         results = await asyncio.gather(
             task2.query_top_5_advance_stocks(pool, date_key),
             task2.query_top_5_decline_stocks(pool, date_key),
@@ -81,23 +27,36 @@ async def fetch_data(date_key):
             task4.fetch_foreign_trading(pool, date_key),
             task4.fetch_incountry_trading(pool, date_key),
         )
-
         return results
 
-async def create_new(date_key):
-
+async def create_new_api(date_key):
+    """Trả về báo cáo dưới dạng JSON"""
+    start_time = time.time()
 
     # Lấy dữ liệu từ PostgreSQL
     advance_result, decline_result, stock_volumn, highest_volatility, query_index_data, stock_data_task3, foreign_trading, incountry_trading = await fetch_data(date_key)
 
     end_time = time.time()
+    elapsed_time = round(end_time - start_time, 2)
 
-    elapsed_time = end_time
-    # Gọi hàm tạo PDF
-    create_pdf_report(date_key, query_index_data, advance_result, decline_result, stock_volumn, highest_volatility, stock_data_task3, foreign_trading, incountry_trading, elapsed_time)
+    # Định dạng JSON
+    report_data = {
+        "date": date_key,
+        "Tổng kết thị trường": json.loads(query_index_data),
+        "Biến động cổ phiếu nổi bật": {
+            "Top 5 tăng mạnh": json.loads(advance_result),
+            "Top 5 giảm mạnh": json.loads(decline_result),
+            "Cổ phiếu có thanh khoản cao nhất": json.loads(stock_volumn),
+            "Cổ phiếu có biên độ dao động mạnh nhất": json.loads(highest_volatility)
+        },
+        "Diễn biến ngành nghề": json.loads(stock_data_task3),
+        "Giao Dịch Khối Ngoại và Tổ Chức": {
+            "Khối ngoại": json.loads(foreign_trading),
+            "Tổ chức trong nước": json.loads(incountry_trading)
+        },
+        "elapsed_time": f"{elapsed_time} giây",
+        "timestamp": datetime.now().isoformat()
+    }
 
-# if __name__ == "__main__":
-#     date_key = "2022-12-13"  # Ngày cần truy vấn
-#     start_time = time.time()
-#     print(f"\n🕒 Đang chạy truy vấn lúc: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-#     asyncio.run(main(date_key))
+    return json.dumps(report_data, ensure_ascii=False, indent=4)
+

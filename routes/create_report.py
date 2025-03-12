@@ -6,7 +6,8 @@ from .create_pdf.all_day_past.total import create_new
 from .create_pdf.aip_report_aft.total import create_new_afternoon
 from .create_pdf.aip_report_evening.total import create_new_evening
 from .create_pdf.aip_report_evening_json.total import create_new_evening_api
-from .create_pdf.aip_report_aft_json.total import create_new_allday_api
+from .create_pdf.aip_report_aft_json.total import create_new_aft_json
+from .create_pdf.all_day_past_json.total import create_new_api
 from datetime import datetime
 import asyncio
 import json
@@ -43,9 +44,9 @@ from flask import Response
 import json
 
 @report_bp.route('/api/sa/<string:day>', methods=['GET'])
-def create_api_evening(day):
+def create_api_aft(day):
     # Gọi hàm async trong Flask bằng asyncio.run()
-    report_json = asyncio.run(create_new_evening_api(day))
+    report_json = asyncio.run(create_new_aft_json(day))
 
     # Giải mã JSON string thành Python dict để Flask xử lý đúng
     report_data = json.loads(report_json)
@@ -60,6 +61,19 @@ def create_api_evening(day):
 def create_api_chieuy(day):
     # Gọi hàm async trong Flask bằng asyncio.run()
     report_json = asyncio.run(create_new_evening_api(day))
+
+    # Giải mã JSON string thành Python dict để Flask xử lý đúng
+    report_data = json.loads(report_json)
+
+    # Trả về JSON với định dạng đẹp và hỗ trợ Unicode
+    return Response(
+        json.dumps(report_data, indent=4, ensure_ascii=False),  # 🚀 `ensure_ascii=False` giúp hiển thị tiếng Việt đúng
+        mimetype="application/json"
+    )
+@report_bp.route('/api/<string:day>', methods=['GET'])
+def create_api(day):
+    # Gọi hàm async trong Flask bằng asyncio.run()
+    report_json = asyncio.run(create_new_api(day))
 
     # Giải mã JSON string thành Python dict để Flask xử lý đúng
     report_data = json.loads(report_json)

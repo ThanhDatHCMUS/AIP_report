@@ -29,7 +29,7 @@ async def fetch_data(date_key):
         )
         return results
 
-async def create_new_allday_api(date_key):
+async def create_new_aft_json(date_key):
     """Trả về báo cáo dưới dạng JSON"""
     start_time = time.time()
 

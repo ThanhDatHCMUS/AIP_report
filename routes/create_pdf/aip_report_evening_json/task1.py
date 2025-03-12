@@ -24,7 +24,7 @@ async def query_index_data(pool,date_key):
         print('loại dữ liệu predate: ', type(predate))
         date_key_convert = date_key.replace("-","")
         date_key = date_key_convert
-        index_codes = ['VNINDEX', 'HNX', 'UPCOM']
+        index_codes = ['VNINDEX', 'HNXINDEX', 'UPINDEX']
 
 
         # 🟢 Lấy dữ liệu chỉ số chính
@@ -34,8 +34,8 @@ async def query_index_data(pool,date_key):
             query = f"""
 SELECT 
     f1.symbol,
-    f1.priceclose - f2.priceclose AS close_diff,
-    (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
+    f1.priceclose - f2.priceclose AS change,
+    (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS percent
 FROM basement.aip_report_index f1
 JOIN basement.aip_report_index_aft f2 
     ON f1.symbol = f2.symbol 
@@ -46,11 +46,17 @@ WHERE f1.date = '{date_key}'
             row = await conn.fetchrow(query)
             if row:
                 trend = "Tăng" if row["change"] > 0 else "Giảm"
-                index_results.append(
-                    f"- {index}: {row['close_index']} ({trend} {abs(row['change']):.2f} điểm, tương đương {abs(row['percent']):.2f}%)"
-                )
+                index_results.append({
+                    "index": index,
+                    "symbol": row["symbol"],
+                    "trend": trend,
+                    "change": round(abs(row["change"]), 2),
+                    "percent": round(abs(row["percent"]), 2)
+                })
+
     
-        if index_results == []: index_results = [0, 0, 0]
+        if not index_results:
+            index_results = [{"index": "Không có dữ liệu"}]
 
         # 🟢 Lấy dữ liệu thanh khoản thị trường
 
@@ -93,14 +99,10 @@ WHERE f1.date  = '{date_key}' and f1.priceclose = f2.priceclose """
         await conn.close()
 
         result = {
-            "Chỉ số chính": [
-                index_results[0],
-                index_results[1],
-                index_results[2]
-            ],
+            "Chỉ số chính": index_results,
             "Thanh khoản thị trường": {
-                "Tổng giá trị giao dịch": f"{float(total_value)/1000000000:.2f} tỷ VND",
-                "Tổng khối lượng giao dịch": f"{float(total_share)/1000000:.2f} triệu cổ phiếu"
+                "Tổng giá trị giao dịch": f"{float(total_value if total_value else 0)/1000000000:.2f} tỷ VND",
+                "Tổng khối lượng giao dịch": f"{float(total_share if total_share else 0)/1000000:.2f} triệu cổ phiếu"
             },
             "Số lượng mã cổ phiếu": {
                 "Tăng giá": f"{advance} mã",

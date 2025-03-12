@@ -11,22 +11,22 @@ async def query_top_5_advance_stocks(pool,date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
-SELECT 
-    f1.symbol,
-    f1.priceclose - f2.priceclose AS close_diff,
-    (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
-FROM basement.aip_report_aft f1
-JOIN basement.aip_report_aft f2 
-    ON f1.symbol = f2.symbol 
-    AND f2.date::date = 
-        CASE 
-            WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
-            ELSE f1.date::date - INTERVAL '1 day'   
-        end
-WHERE f1.date::date = '{date_key}'
-  AND f1.priceclose IS NOT NULL
-ORDER BY advance_percent DESC
-LIMIT 5;
+            SELECT 
+                f1.symbol,
+                f1.priceclose - f2.priceclose AS close_diff,
+                (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
+            FROM basement.aip_report_aft f1
+            JOIN basement.aip_report_aft f2 
+                ON f1.symbol = f2.symbol 
+                AND f2.date::date = 
+                    CASE 
+                        WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
+                        ELSE f1.date::date - INTERVAL '1 day'   
+                    end
+            WHERE f1.date::date = '{date_key}'
+            AND f1.priceclose IS NOT NULL
+            ORDER BY advance_percent DESC
+            LIMIT 5;
             """
 
             rows = await conn.fetch(query)
@@ -49,22 +49,22 @@ async def query_top_5_decline_stocks(pool,date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
-SELECT 
-    f1.symbol,
-    f1.priceclose - f2.priceclose AS close_diff,
-    (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
-FROM basement.aip_report_aft f1
-JOIN basement.aip_report_aft f2 
-    ON f1.symbol = f2.symbol 
-    AND f2.date::date = 
-        CASE 
-            WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
-            ELSE f1.date::date - INTERVAL '1 day'   
-        end
-WHERE f1.date::date = '{date_key}'
-  AND f1.priceclose IS NOT NULL
-ORDER BY advance_percent 
-LIMIT 5;
+            SELECT 
+                f1.symbol,
+                f1.priceclose - f2.priceclose AS close_diff,
+                (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
+            FROM basement.aip_report_aft f1
+            JOIN basement.aip_report_aft f2 
+                ON f1.symbol = f2.symbol 
+                AND f2.date::date = 
+                    CASE 
+                        WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
+                        ELSE f1.date::date - INTERVAL '1 day'   
+                    end
+            WHERE f1.date::date = '{date_key}'
+            AND f1.priceclose IS NOT NULL
+            ORDER BY advance_percent 
+            LIMIT 5;
             """
 
             rows = await conn.fetch(query)
@@ -86,11 +86,11 @@ async def highest_volume_stocks(pool,date_key):
     async with pool.acquire() as conn:
         try:
             query = f"""
-SELECT symbol, totalvolume 
-FROM basement.aip_report_aft 
-where date::date = '{date_key}'  
-ORDER BY totalvolume DESC 
-LIMIT 1
+            SELECT symbol, totalvolume 
+            FROM basement.aip_report_aft 
+            where date::date = '{date_key}'  
+            ORDER BY totalvolume DESC 
+            LIMIT 1
             """
 
             row = await conn.fetchrow(query)
@@ -112,26 +112,25 @@ async def highest_volatility_stock(pool,date_key):
 
 
             query = f"""
-SELECT 
-    f1.symbol,
-    (f1.pricehigh - f1.pricelow) / f2.priceclose AS advance_percent,
-	(f1.pricehigh - f1.pricelow)  As advance_grade
-FROM basement.aip_report_aft f1
-JOIN basement.aip_report_aft f2 
-    ON f1.symbol = f2.symbol 
-    AND f2.date::date =  
-	     CASE 
-            WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
-            ELSE f1.date::date - INTERVAL '1 day'   
-       end 
-WHERE f1.date::date = '{date_key}' 
-order by advance_percent desc
-limit 1
+            SELECT 
+                f1.symbol,
+                (f1.pricehigh - f1.pricelow) / f2.priceclose AS advance_percent,
+                (f1.pricehigh - f1.pricelow)  As advance_grade
+            FROM basement.aip_report f1
+            JOIN basement.aip_report_aft f2 
+                ON f1.symbol = f2.symbol 
+                AND f2.date::date =  
+                    CASE 
+                        WHEN EXTRACT(DOW FROM f1.date::date) = 1 THEN f1.date::date - INTERVAL '3 days'   
+                        ELSE f1.date::date - INTERVAL '1 day'   
+                end 
+            WHERE f1.date::date = '{date_key}' 
+            order by advance_percent desc
+            limit 1
             """
 
             row = await conn.fetchrow(query)
             await conn.close()
-
             if not row:
                 return f"Cổ phiếu có biên độ dao động mạnh nhất: Không có dữ liệu."
             print("Xong task 2.2 lúc: ", datetime.now())

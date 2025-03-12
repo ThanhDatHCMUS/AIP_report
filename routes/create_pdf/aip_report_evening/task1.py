@@ -24,7 +24,7 @@ async def query_index_data(pool,date_key):
         print('loại dữ liệu predate: ', type(predate))
         date_key_convert = date_key.replace("-","")
         date_key = date_key_convert
-        index_codes = ['VNINDEX', 'HNX', 'UPCOM']
+        index_codes = ['VNINDEX', 'HNXINDEX', 'UPINDEX']
 
 
         # 🟢 Lấy dữ liệu chỉ số chính
@@ -32,24 +32,23 @@ async def query_index_data(pool,date_key):
         for index in index_codes:
 
             query = f"""
-SELECT 
-    f1.symbol,
-    f1.priceclose - f2.priceclose AS close_diff,
-    (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS advance_percent
-FROM basement.aip_report_index f1
-JOIN basement.aip_report_index_aft f2 
-    ON f1.symbol = f2.symbol 
-    AND f2.date = f1.date
-WHERE f1.date = '{date_key}'
-  AND f1.symbol = '{index}'
+            SELECT 
+                f1.symbol,
+                f1.priceclose - f2.priceclose AS change,
+                (f1.priceclose - f2.priceclose) / f2.priceclose * 100 AS percent
+            FROM basement.aip_report_index f1
+            JOIN basement.aip_report_index_aft f2 
+                ON f1.symbol = f2.symbol 
+                AND f2.date = f1.date
+            WHERE f1.date = '{date_key}'
+            AND f1.symbol = '{index}'
             """
             row = await conn.fetchrow(query)
             if row:
                 trend = "Tăng" if row["change"] > 0 else "Giảm"
                 index_results.append(
-                    f"- {index}: {row['close_index']} ({trend} {abs(row['change']):.2f} điểm, tương đương {abs(row['percent']):.2f}%)"
+                    f"- {index}: {row['symbol']} ({trend} {abs(row['change']):.2f} điểm, tương đương {abs(row['percent']):.2f}%)"
                 )
-    
         if index_results == []: index_results = [0, 0, 0]
 
         # 🟢 Lấy dữ liệu thanh khoản thị trường
@@ -65,22 +64,22 @@ WHERE f1.date = '{date_key}'
 
         # 🟢 Lấy dữ liệu số lượng mã cổ phiếu
         count_stock = f"""select count(*) from basement.aip_report_eve
-WHERE  date::date = '{date_key}' """
-        
+        WHERE  date::date = '{date_key}' """
+                
         query_advance = f"""SELECT count(*)
-FROM basement.aip_report f1
-JOIN basement.aip_report_aft f2
-ON f1.symbol = f2.symbol
-AND  f2.date  = f1.date
-WHERE f1.date  = '{date_key}' and f1.priceclose > f2.priceclose """
+        FROM basement.aip_report f1
+        JOIN basement.aip_report_aft f2
+        ON f1.symbol = f2.symbol
+        AND  f2.date  = f1.date
+        WHERE f1.date  = '{date_key}' and f1.priceclose > f2.priceclose """
         
 
         query_no_change = f"""SELECT count(*)
-FROM basement.aip_report f1
-JOIN basement.aip_report_aft f2
-ON f1.symbol = f2.symbol
-AND  f2.date  = f1.date
-WHERE f1.date  = '{date_key}' and f1.priceclose = f2.priceclose """
+        FROM basement.aip_report f1
+        JOIN basement.aip_report_aft f2
+        ON f1.symbol = f2.symbol
+        AND  f2.date  = f1.date
+        WHERE f1.date  = '{date_key}' and f1.priceclose = f2.priceclose """
 
 
         count_stock = await conn.fetchval(count_stock) or 0
@@ -94,18 +93,18 @@ WHERE f1.date  = '{date_key}' and f1.priceclose = f2.priceclose """
 
         # 🟢 Format kết quả trả về theo mẫu
         result = f"""
-- Chỉ số chính:
-    {index_results[0]}
-    {index_results[1]}
-    {index_results[2]}
-- Thanh khoản thị trường:
-    - Tổng giá trị giao dịch: {float(total_value)/1000000000} tỷ VND
-    - Tổng khối lượng giao dịch: {float(total_share)/1000000} triệu  cổ phiếu
-- Số lượng mã cổ phiếu:
-    - Tăng giá: {advance} mã
-    - Giảm giá: {decline} mã
-    - Đứng giá: {no_change} mã
-"""
+        - Chỉ số chính:
+            {index_results[0]}
+            {index_results[1]}
+            {index_results[2]}
+        - Thanh khoản thị trường:
+            - Tổng giá trị giao dịch: {float(total_value if total_value else 0)/1000000000} tỷ VND
+            - Tổng khối lượng giao dịch: {float(total_share if total_share else 0)/1000000} triệu  cổ phiếu
+        - Số lượng mã cổ phiếu:
+            - Tăng giá: {advance} mã
+            - Giảm giá: {decline} mã
+            - Đứng giá: {no_change} mã
+        """
         
         print("Xong task 1 lúc: ", datetime.now())
         return result.strip()

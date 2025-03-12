@@ -73,7 +73,7 @@ WHERE  date::date = '{date_key}' """
         
         query_advance = f"""SELECT count(*)
 FROM basement.aip_report_aft f1
-JOIN basement.aip_report_aft f2
+JOIN basement.aip_report  f2
 ON f1.symbol = f2.symbol
 AND  f2.date::date  = '{predate}'
 
@@ -93,7 +93,7 @@ WHERE f1.date::date = '{date_key}' and f1.priceclose > f2.priceclose """
 
         query_no_change = f"""SELECT count(*)
 FROM basement.aip_report_aft f1
-JOIN basement.aip_report_aft f2
+JOIN basement.aip_report  f2
 ON f1.symbol = f2.symbol
 AND  f2.date::date  =
 CASE
@@ -124,8 +124,8 @@ WHERE f1.date::date = '{date_key}' and f1.priceclose = f2.priceclose """
     {index_results[1]}
     {index_results[2]}
 - Thanh khoản thị trường:
-    - Tổng giá trị giao dịch: {float(total_value)/1000000000} tỷ VND
-    - Tổng khối lượng giao dịch: {float(total_share)/1000000} triệu  cổ phiếu
+    - Tổng giá trị giao dịch: {float(total_value if total_value else 0)/1000000000} tỷ VND
+    - Tổng khối lượng giao dịch: {float(total_share if total_share else 0)/1000000} triệu  cổ phiếu
 - Số lượng mã cổ phiếu:
     - Tăng giá: {advance} mã
     - Giảm giá: {decline} mã

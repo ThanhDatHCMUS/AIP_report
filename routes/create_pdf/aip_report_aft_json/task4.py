@@ -129,7 +129,7 @@ async def fetch_incountry_trading(pool, date):
                     },
                     "Cổ phiếu bị bán ròng mạnh nhất": {
                         "symbol": symbol_ban_rong,
-                        "value": round(value_ban_rong / 1_000_000_000, 2) if value_ban_rong else 0
+                        "value": round(-value_ban_rong / 1_000_000_000, 2) if value_ban_rong else 0
                     }
                 },
                 "timestamp": datetime.now().isoformat()

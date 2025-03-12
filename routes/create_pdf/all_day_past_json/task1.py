@@ -50,11 +50,17 @@ WHERE f1.date = '{date_key}'
             row = await conn.fetchrow(query)
             if row:
                 trend = "Tăng" if row["change"] > 0 else "Giảm"
-                index_results.append(
-                    f"- {index}: {row['symbol']} ({trend} {abs(row['change']):.2f} điểm, tương đương {abs(row['percent']):.2f}%)"
-                )
+                index_results.append({
+                    "index": index,
+                    "symbol": row["symbol"],
+                    "trend": trend,
+                    "change": round(abs(row["change"]), 2),
+                    "percent": round(abs(row["percent"]), 2)
+                })
 
-        if index_results == []: index_results = [0, 0, 0]
+    
+        if not index_results:
+            index_results = [{"index": "Không có dữ liệu"}]
         # 🟢 Lấy dữ liệu thanh khoản thị trường
 
         query_total_value = f"select sum(totalvalue) from basement.aip_report where date::date = '{date_key}'"
@@ -112,22 +118,21 @@ WHERE f1.date::date = '{date_key}' and f1.priceclose = f2.priceclose """
         await conn.close()
 
         # 🟢 Format kết quả trả về theo mẫu
-        result = f"""
-- Chỉ số chính:
-    {index_results[0]}
-    {index_results[1]}
-    {index_results[2]}
-- Thanh khoản thị trường:
-    - Tổng giá trị giao dịch: {float(total_value)/1000000000} tỷ VND
-    - Tổng khối lượng giao dịch: {float(total_share)/1000000} triệu  cổ phiếu
-- Số lượng mã cổ phiếu:
-    - Tăng giá: {advance} mã
-    - Giảm giá: {decline} mã
-    - Đứng giá: {no_change} mã
-"""
+        result = {
+            "Chỉ số chính": index_results,
+            "Thanh khoản thị trường": {
+                "Tổng giá trị giao dịch": f"{float(total_value if total_value else 0)/1000000000:.2f} tỷ VND",
+                "Tổng khối lượng giao dịch": f"{float(total_share if total_share else 0)/1000000:.2f} triệu cổ phiếu"
+            },
+            "Số lượng mã cổ phiếu": {
+                "Tăng giá": f"{advance} mã",
+                "Giảm giá": f"{decline} mã",
+                "Đứng giá": f"{no_change} mã"
+            }
+        }
         
         print("Xong task 1 lúc: ", datetime.now())
-        return result.strip()
+        return json.dumps(result)
 
 DB_CONFIG = {
     "database": "postgres",
