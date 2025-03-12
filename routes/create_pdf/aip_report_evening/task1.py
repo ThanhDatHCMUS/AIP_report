@@ -49,7 +49,8 @@ WHERE f1.date = '{date_key}'
                 index_results.append(
                     f"- {index}: {row['close_index']} ({trend} {abs(row['change']):.2f} điểm, tương đương {abs(row['percent']):.2f}%)"
                 )
-
+    
+        if index_results == []: index_results = [0, 0, 0]
 
         # 🟢 Lấy dữ liệu thanh khoản thị trường
 
