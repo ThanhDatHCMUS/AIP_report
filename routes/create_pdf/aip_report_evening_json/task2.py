@@ -149,8 +149,8 @@ SELECT
     f1.symbol,
     (f1.pricehigh - f1.pricelow) / f2.priceclose * 100 AS advance_percent,
     (f1.pricehigh - f1.pricelow) AS advance_grade
-FROM basement.aip_report_eve f1
-JOIN basement.aip_report f2 
+FROM basement.aip_report f1
+JOIN basement.aip_report_aft f2 
     ON f1.symbol = f2.symbol 
     AND f2.date = f1.date
 WHERE f1.date = '{date_key}' 
